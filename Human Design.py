@@ -14,7 +14,7 @@ def get_knowledge_base():
             return f.read()
     return None
 
-knowledge_context = get_knowledge_base()
+knowledge_context = get_knowledge_base.txt()
 
 # --- 2. 側邊欄：API Key 設定 ---
 with st.sidebar:
