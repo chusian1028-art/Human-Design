@@ -1,66 +1,84 @@
 import streamlit as st
-import google.generativeai as genai
-from PIL import Image
 
-# --- 1. 核心資料庫 (晏駒，這部分內容精選自你提供的《財賦密碼》) ---
+# --- 1. 核心資料庫 (數據擷取自：人類圖財賦密碼、找回原廠設定、圖解人類圖) ---
+# 晏駒，這裡我幫你補強了跟「錢」和「職涯」最相關的內容 
 HD_DATABASE = {
     "types": {
-        "生產者": "【建立者】適合穩定產出。賺錢密碼：對工作有『回應』時產能最高。",
-        "顯示生產者": "【多工建立者】效率極高。賺錢密碼：先求有再求好。",
-        "投射者": "【指導者】適合顧問、管理。賺錢密碼：等待正式邀請，才華被看見時身價最高。",
-        "顯示者": "【發起者】適合領導、開創。賺錢密碼：行動前『告知』以減少阻力。",
-        "反映者": "【評斷者】觀察群體價值。賺錢密碼：隨月亮週期運作。"
+        "生產者": "【打造世界的偉大創造者】策略：等待，回應。當你快樂投入真心喜愛的事時，能建立屬於自己的王國。關鍵：對工作有「回應」時產能最強 [cite: 15, 18]。",
+        "顯示生產者": "【重視效率的工作者】策略：等待回應並告知。手腳明快、有效率，傾向先求有再求好，適合多任務並行 [cite: 18, 15]。",
+        "投射者": "【新一代的領導者】策略：等待被邀請。專長是協助並支持他人工作得更有效率，適合顧問、管理者與協調者。關鍵：才華被看見時身價最高 [cite: 18, 15]。",
+        "顯示者": "【唯一能主動發起的類型】策略：告知。具備強大發起行動並影響眾人的能力，是天然的領導者原型，適合自主性極高的工作 [cite: 18, 15]。",
+        "反映者": "【環境的仲裁者】策略：等待28天。能體驗並評斷整體環境品質，適合環境諮詢、反饋、高端藝術評論 [cite: 18, 15]。"
     },
     "channels": {
-        "10-20": "【覺醒】適合：生命導師、內容創作。",
-        "26-44": "【傳遞訊息】適合：廣告、業務開發。",
-        "21-45": "【金錢通道】適合：組織領導者、財務管理。"
+        "10-20": "【覺醒的設計】追求真實與正直。適合：生命導師、心靈引導、自媒體、演員或任何展現獨特自我的工作 [cite: 17, 16]。",
+        "26-44": "【傳遞訊息的設計】最強行銷天賦。適合：廣告、電影製作、業務行銷、品牌公關，擅長將理念賣給對的人 。",
+        "21-45": "【金錢通道】最強物質掌控。適合：CEO、財務管理、企業家、組織領導者，具備掌控資源與財產的天賦 。",
+        "27-50": "【監護人的設計】守護與滋養。適合：教育培訓、團隊管理、人力資源、信託或資源分配工作 。",
+        "42-53": "【循環的設計】週期處理專家。適合：專案管理、流程改善或任何有明確起點與終點的循環性任務 [cite: 17, 15]。",
+        "11-56": "【好奇的設計】創意說書人。適合：品牌行銷、自媒體創作者、編劇、旅遊作家、跨領域教育家 [cite: 15, 16]。",
+        "61-24": "【思想家的設計】深度思考與悟性。適合：研發、策略分析、心理學、哲學、高深科學研究 [cite: 17]。"
+    },
+    "gates": {
+        "1": "【自我表達】透過獨一無二的創意來獲利。不需要做最好，要做全新 [cite: 17]。",
+        "11": "【靈感】點子王，頭腦充滿創意。適合：專案企劃、商機媒合、內容腳本創作 。",
+        "13": "【傾聽者】具備神祕聆聽天賦。適合：人脈經營、諮商、情報蒐集或深度導師工作 [cite: 17]。",
+        "14": "【豐盛】強大的資源掌握力。適合：投資、理財規劃、資源媒合或資本管理 。",
+        "19": "【資源保障】與生存安全感相關。適合：保全系統、保險業、基礎生活資源供應業 。",
+        "20": "【當下】快速反應。適合：危機處理、即時服務、快節奏的動態環境 。",
+        "21": "【控制】對物質有強烈掌控欲。適合：管理預算、掌控產線、物流配送管理 。",
+        "26": "【推銷員】天生業務大師。適合：銷售、品牌塑造、說服他人達成商業目標 。",
+        "55": "【情緒豐富】具強烈感染力。適合：表演藝術、音樂創作、演講，能驅動大眾情感 [cite: 17, 16]。",
+        "56": "【說故事】用經歷啟發他人。適合：自媒體、演員、演說家、主持人、創意行銷 [cite: 15, 16]。"
     }
 }
 
-# --- 2. 介面設定 ---
-st.set_page_config(page_title="YG 人類圖財賦儀", layout="centered")
+# --- 2. App 介面呈現 ---
+st.set_page_config(page_title="YG 人類圖財賦密碼分析儀", layout="centered")
 st.title("💡 人類圖財賦密碼分析儀")
-st.write("找到你的職場原廠設定。作者：李晏駒 (YG)")
+st.write("透過人類圖大資料庫找到你的職場原廠設定。作者：李晏駒 (YG) ")
 
-# --- 3. 手動輸入區 (最明顯的位置) ---
-st.markdown("---")
-st.header("✍️ 直接輸入你的數據")
+st.divider()
 
-# 使用表單元件讓輸入更整齊
-with st.form("my_form"):
-    user_type = st.selectbox("1. 選擇你的類型", ["請選擇"] + list(HD_DATABASE["types"].keys()))
-    input_ch = st.text_input("2. 輸入已接通通道 (例如: 10-20, 26-44)", placeholder="多組請用逗號隔開")
-    input_gt = st.text_input("3. 輸入有色閘門 (例如: 1, 21, 56)", placeholder="多個數字請用逗號隔開")
-    
-    submit_button = st.form_submit_button(label="🚀 生成我的財賦報告")
+# 手動輸入區域
+with st.container():
+    st.subheader("✍️ 第一步：請輸入你的數據")
+    col1, col2 = st.columns(2)
+    with col1:
+        user_type = st.selectbox("1. 選擇類型", ["請選擇"] + list(HD_DATABASE["types"].keys()))
+    with col2:
+        user_auth = st.selectbox("2. 內在權威", ["請選擇", "情緒", "薦骨", "直覺", "意志力", "自我", "環境", "月亮"])
 
-if submit_button:
-    if user_type == "請選擇":
-        st.error("請至少選擇一個『類型』喔！")
-    else:
-        st.balloons() # 增加一點成就感的特效
-        st.subheader(f"📊 {user_type} 的專屬財賦分析")
-        st.success(HD_DATABASE["types"][user_type])
-        
-        if input_ch:
-            st.markdown("#### 🛠️ 核心才能")
-            for ch in [c.strip() for c in input_ch.split(",")]:
-                st.write(f"✅ **{ch} 通道**：{HD_DATABASE['channels'].get(ch, '內容補充中...')}")
+    ch_input = st.text_input("3. 輸入通道 (數字間加橫線，多組請用逗號隔開)", placeholder="例如: 10-20, 26-44")
+    gt_input = st.text_input("4. 輸入有色閘門 (多個請用逗號隔開)", placeholder="例如: 1, 11, 56")
 
-# --- 4. AI 辨識區 (放在最後面當備案) ---
-st.markdown("---")
-st.header("📸 沒數據？上傳截圖辨識")
-uploaded_file = st.file_uploader("點擊上傳人類圖截圖", type=["png", "jpg", "jpeg"])
+    if st.button("🚀 生成我的專屬財賦報告", use_container_width=True):
+        if user_type == "請選擇":
+            st.warning("請先選擇你的類型喔！")
+        else:
+            st.balloons()
+            st.success(f"### 📊 {user_type} 的職場分析報告")
+            st.markdown(f"**【核心職場定位】**\n\n{HD_DATABASE['types'][user_type]}")
+            
+            # 通道分析
+            if ch_input:
+                st.markdown("---")
+                st.markdown("#### 🛠️ 核心才能 (通道)")
+                for ch in [c.strip() for c in ch_input.split(",")]:
+                    if ch in HD_DATABASE["channels"]:
+                        st.info(f"✅ **{ch} 通道**：{HD_DATABASE['channels'][ch]}")
+                    else:
+                        st.write(f"🔹 **{ch} 通道**：此內容目前收錄中，詳細解說請參考《找回原廠設定》 [cite: 17]。")
+            
+            # 閘門分析
+            if gt_input:
+                st.markdown("---")
+                st.markdown("#### 💰 賺錢密碼 (閘門)")
+                for gt in [g.strip() for g in gt_input.split(",")]:
+                    if gt in HD_DATABASE["gates"]:
+                        st.write(f"💎 **閘門 {gt}**：{HD_DATABASE['gates'][gt]}")
+                    else:
+                        st.write(f"🔸 **閘門 {gt}**：此閘門建議收錄中，請查看 PDF 資料庫細節 。")
 
-if uploaded_file:
-    if "GOOGLE_API_KEY" in st.secrets:
-        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-        img = Image.open(uploaded_file)
-        st.image(img, width=200)
-        if st.button("開始 AI 掃描"):
-            model = genai.GenerativeModel('gemini-1.5-pro')
-            res = model.generate_content(["請識別這張人類圖的類型、通道與閘門。用繁體中文回答。", img])
-            st.info(res.text)
-    else:
-        st.warning("⚠️ API Key 尚未設定，無法使用自動辨識，請使用上方的『手動輸入』。")
+st.divider()
+st.caption("資料來源：人類圖大資料庫 PDF (人類圖財賦密碼、找回原廠設定、圖解人類圖)。")
