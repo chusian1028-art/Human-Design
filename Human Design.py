@@ -1,104 +1,108 @@
 import streamlit as st
 import google.generativeai as genai
-from PIL import Image
+import os
 
-# --- 1. 核心大資料庫：直接給出 PDF 裡的正確答案 ---
-# 我已將 7 本書中有關職業、錢財、天賦的內容整合進來
-HD_ANSWERS = {
-    "types": {
-        "生產者": "【職場角色：建造者】你的薦骨是強大的電池。**賺錢密碼：** 必須對工作有「嗯哼」的回應才投入。當你感到滿足時，金錢會隨之而來。適合需要持續產出、專業技術深化的領域。",
-        "顯示生產者": "【職場角色：多工效率王】你是最有生產效率的人。**賺錢密碼：** 適合同時處理多個專案。不要怕跳過步驟，你的天賦在於快速找到最省力路徑。適合步調極快、多樣化發展的職業。",
-        "投射者": "【職場角色：指導顧問】你不是來工作的，你是來引導別人的。**賺錢密碼：** 不要主動推銷，要「等待被邀請」。當你被看見才華並受邀時，你的建議最值錢。適合管理、諮商、流程優化或高端中介。",
-        "顯示者": "【職場角色：開創領袖】你是純粹的發起者。**賺錢密碼：** 適合獨立作業或帶領團隊開創新局。行動前一定要「告知」相關人士，減少阻力。適合高自主性、自由接案或新創項目負責人。",
-        "反映者": "【職場角色：環境觀察家】你是整體的風向球。**賺錢密碼：** 你在對的環境就能賺到錢。重大決定請等待28天。適合擔任企業顧問、高端藝術評鑑、社會觀察或環境品質分析。"
-    },
-    "channels": {
-        "21-45": "【金錢通道】最強大的物質能量。天生適合掌控金錢、資源與領地。適合：CEO、財務長、擁有權力的管理者。",
-        "26-44": "【行銷通道】天生的銷售員。能看穿市場需求，把理念賣給對的人。適合：行銷公關、廣告創意、業務、電影製作人。",
-        "10-20": "【覺醒通道】活出真我的展現。這對演員或主持極為重要。適合：內容創作、生命教練、表演藝術、個人品牌。",
-        "11-56": "【好奇通道】創意的說故事者。能把平凡經驗講得引人入勝。適合：編劇、自媒體、主持人、教育家、跨界旅遊。",
-        "16-48": "【才華通道】職人精神。透過長年累月的練習達成大師境界。適合：技術專家、設計師、工匠、資深工程師。",
-        "17-62": "【組織通道】邏輯與細節的王者。能將混亂的事物整理成結構。適合：企劃、行政管理、法律、精密數據分析。",
-        "27-50": "【監護人通道】照顧與資源分配。適合：人力資源管理、信託、教育、團隊後勤支援。",
-        "34-57": "【原型通道】生存直覺。能在危機中迅速做出對的動作。適合：應急決策、高風險投資、現場指揮官。",
-        "37-40": "【社群通道】經營人際與交易。擅長談判與分配利益。適合：商務談判、人脈整合、社群經營、團隊核心。",
-        "61-24": "【思想家通道】知曉一切的渴望。能悟出獨特真理。適合：研發、策略師、心理分析、學術研究員。"
-    },
-    "gates": {
-        "1": "【創意天賦】透過獨一無二的自我表達獲利。不需要做最好，只要做最特別的。",
-        "14": "【物質豐盛】對資源有極大掌握力。這是關於『開車的動力』。適合：投資、資本運作、理財。",
-        "21": "【控制天賦】喜歡掌握預算與管理細節。適合：採購、行政總監、營運控制。",
-        "26": "【推銷密碼】天生能說服他人。適合：品牌塑造、廣告行銷、談判談條件。",
-        "56": "【說故事天賦】適合透過經驗分享來啟發他人。適合：演講、主持人、演藝、自媒體內容經營。",
-        "11": "【點子王】腦袋永遠有新商機。適合：開發、概念發想、創意諮詢。",
-        "20": "【當下反應】適合需要即時處理、快速反應的工作。適合：新聞現場、客服主任、危機處理。"
-    }
-}
+# --- 1. 設定與讀取知識庫 ---
+st.set_page_config(page_title="YG 人類圖全能大腦", layout="wide")
 
-# --- 2. App 佈局設計 ---
-st.set_page_config(page_title="YG 人類圖全能分析儀", layout="centered")
+@st.cache_data
+def get_knowledge_base():
+    """讀取合併後的 7 本書知識庫檔案"""
+    file_path = "knowledge_base.txt"
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return None
 
-# 這裡加入一點 YG 風格的自媒體色彩
-st.title("💡 人類圖財賦密碼：全自動分析儀")
-st.write("輸入你的數據，直接獲得《財賦密碼》與《找回原廠設定》中的職場答案。")
+knowledge_context = get_knowledge_base()
 
-# --- 3. 分析功能區 ---
-with st.container():
-    st.subheader("✍️ 輸入你的數據 (答案已整合)")
+# --- 2. 側邊欄：API Key 設定 ---
+with st.sidebar:
+    st.header("🔑 系統設定")
+    # 優先從 Streamlit Secrets 讀取，若無則顯示輸入框
+    if "GOOGLE_API_KEY" in st.secrets:
+        api_key = st.secrets["GOOGLE_API_KEY"]
+        st.success("✅ API 金鑰已從系統安全設定中載入")
+    else:
+        api_key = st.sidebar.text_input("請輸入 Gemini API Key", type="password")
+        st.info("💡 建議將 API Key 設定在 Streamlit 後台的 Secrets 中以保證安全。")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        u_type = st.selectbox("1. 選擇類型", ["請選擇"] + list(HD_ANSWERS["types"].keys()))
-    with col2:
-        u_auth = st.selectbox("2. 內在權威", ["請選擇", "情緒", "薦骨", "直覺", "意志力", "自我", "環境", "月亮"])
+    st.divider()
+    st.caption("版本：2.0 (全資料庫連動版)")
+    st.caption("作者：李晏駒 (YG)")
 
-    u_ch = st.text_input("3. 輸入通道 (數字間橫線，多組請用逗號隔開)", placeholder="例如: 10-20, 26-44")
-    u_gt = st.text_input("4. 輸入閘門 (多組請用逗號隔開)", placeholder="例如: 1, 14, 21, 56")
+# --- 3. 主畫面介面 ---
+st.title("🛡️ 人類圖全自動解答系統：職涯財賦版")
+st.write("本系統已連動 7 本經典文獻，會直接根據書本內容回答你的職場原廠設定。")
 
-    if st.button("🚀 獲取職涯答案報告", use_container_width=True):
-        if u_type == "請選擇":
-            st.warning("嘿！請先選擇你的類型喔！")
+# 建立分頁
+tab_manual, tab_ai = st.tabs(["✍️ 手動輸入分析", "📸 截圖自動辨識"])
+
+# --- 分頁：手動輸入 ---
+with tab_manual:
+    st.subheader("請輸入你的人類圖數據")
+    c1, c2 = st.columns(2)
+    with c1:
+        u_type = st.selectbox("1. 您的類型", ["生產者", "顯示生產者", "投射者", "顯示者", "反映者"])
+        u_auth = st.text_input("2. 內在權威 (如: 情緒, 薦骨)")
+    with c2:
+        u_ch = st.text_input("3. 通道數字 (如: 10-20, 26-44)")
+        u_gt = st.text_input("4. 閘門數字 (如: 26, 56, 1)")
+
+    user_query = st.text_area("💬 您特別想問什麼？", placeholder="例如：根據我的通道，我在自媒體事業該如何發揮天賦賺錢？")
+
+    if st.button("🚀 啟動 AI 大腦深度分析", use_container_width=True):
+        if not api_key:
+            st.error("❌ 尚未設定 API 金鑰，請在左側選單填寫。")
+        elif not knowledge_context:
+            st.error("❌ 在 GitHub 倉庫中找不到 `knowledge_base.txt`，請確認檔案已上傳。")
         else:
-            st.divider()
-            st.success(f"### 📊 專屬職涯分析報告")
-            
-            # 直接給答案
-            st.markdown(f"#### 👤 職場原廠設定 (類型)\n{HD_ANSWERS['types'][u_type]}")
-            
-            if u_ch:
-                st.markdown("---")
-                st.markdown("#### 🛠️ 核心賺錢才能 (通道)")
-                for ch in [c.strip() for c in u_ch.split(",")]:
-                    if ch in HD_ANSWERS["channels"]:
-                        st.info(f"✅ **{ch} 通道**：{HD_ANSWERS['channels'][ch]}")
-                    else:
-                        st.write(f"🔹 **{ch} 通道**：這是一條隱藏天賦，代表你具備獨特的能量流，建議參考大資料庫進階內容。")
+            with st.spinner("AI 正在翻閱 7 本經典文獻，為您尋找正確答案..."):
+                try:
+                    genai.configure(api_key=api_key)
+                    # 使用 Gemini 1.5 Pro，具備超大緩存空間處理數十萬字內容
+                    model = genai.GenerativeModel('gemini-1.5-pro')
+                    
+                    # 構建 Prompt (給 AI 的超級指令)
+                    prompt = f"""
+                    你是一位精通人類圖財富與職涯的專家。
+                    你的知識背景是以下提供的『知識庫』全文內容：
+                    --- 知識庫開始 ---
+                    {knowledge_context[:800000]}  # 傳送內容供 AI 檢索
+                    --- 知識庫結束 ---
+                    
+                    使用者的數據：
+                    - 類型：{u_type}
+                    - 權威：{u_auth}
+                    - 通道：{u_ch}
+                    - 閘門：{u_gt}
+                    
+                    問題：{user_query}
+                    
+                    請嚴格根據知識庫中的內容（特別是《人類圖財賦密碼》、《找回原廠設定》），
+                    直接給予最精確、詳細的職涯與賺錢建議。請不要只給頁碼，要給出書中的具體解讀。
+                    請用溫暖且具備洞察力的口吻，並以繁體中文回答。
+                    """
+                    
+                    response = model.generate_content(prompt)
+                    st.success("### 📜 深度分析報告 (根據文獻解答)")
+                    st.markdown(response.text)
+                except Exception as e:
+                    st.error(f"系統分析失敗：{e}")
 
-            if u_gt:
-                st.markdown("---")
-                st.markdown("#### 💰 具體天賦閘門")
-                for gt in [g.strip() for g in u_gt.split(",")]:
-                    if gt in HD_ANSWERS["gates"]:
-                        st.write(f"💎 **閘門 {gt}**：{HD_ANSWERS['gates'][gt]}")
-                    else:
-                        st.write(f"🔸 **閘門 {gt}**：你的資料庫中包含此閘門的種子，代表一份潛藏的性格特質。")
-
-# --- 4. AI 輔助與導流 ---
-st.divider()
-st.header("📸 沒數據？讓 AI 掃描截圖")
-with st.expander("點擊上傳截圖"):
-    up_file = st.file_uploader("上傳人類圖...", type=["png", "jpg", "jpeg"])
-    if up_file:
-        img = Image.open(up_file)
-        st.image(img, width=250)
-        if st.button("啟動 AI 判讀內容"):
-            if "GOOGLE_API_KEY" in st.secrets:
-                genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+# --- 分頁：截圖辨識 ---
+with tab_ai:
+    st.header("📸 AI 掃描辨識")
+    up_img = st.file_uploader("請上傳人類圖截圖", type=["png", "jpg", "jpeg"])
+    if up_img:
+        st.image(up_img, width=300)
+        if st.button("啟動 AI 判讀"):
+            if api_key:
+                genai.configure(api_key=api_key)
                 model = genai.GenerativeModel('gemini-1.5-pro')
-                res = model.generate_content(["請識別此人類圖的類型、通道、閘門。用繁體中文條列。", img])
-                st.info(res.text)
-            else:
-                st.warning("請在 Streamlit Secrets 設定金鑰方可自動掃描。")
+                res = model.generate_content(["請識別此人類圖的類型、通道與閘門數字，用繁體中文回答。", Image.open(up_img)])
+                st.info(f"AI 識別結果：\n\n{res.text}")
+                st.write("💡 識別後，您可以將數據填入『手動輸入』標籤以獲取深度報告。")
 
-# 5. 底部
-st.caption("本工具整合了《人類圖財賦密碼》、《找回原廠設定》等多部文獻精華。作者：李晏駒 (YG)")
+st.divider()
+st.caption("資料來源：人類圖大資料庫 (YG 自媒體事業專屬)。建議回歸內在權威做決定。")
