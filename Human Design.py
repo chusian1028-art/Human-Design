@@ -79,7 +79,8 @@ with tab_manual:
                     
                     prompt = f"""
                     你是一位人類圖專家。背景知識：
-                    {knowledge_context[:900000]}
+                   # 修改後：只傳送前 30 萬字元，減少 Token 消耗
+                    {knowledge_context[:300000]}
                     
                     使用者數據：{u_type}, {u_auth}, 通道:{u_ch}, 閘門:{u_gt}
                     問題：{user_query}
