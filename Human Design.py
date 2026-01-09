@@ -43,7 +43,7 @@ with st.sidebar:
             st.info("💡 建議將 API Key 設定在 Streamlit 後台的 Secrets 中以保證安全。")
     
     st.divider()
-    st.caption("版本：2.1 (路徑優化版)")
+    st.caption("版本：2.2 (Flash 穩定版)")
     st.caption("作者：李晏駒 (YG)")
 
 # --- 3. 主畫面介面 ---
@@ -70,15 +70,15 @@ with tab_manual:
         if not api_key:
             st.error("❌ 尚未設定 API 金鑰，請在左側選單填寫。")
         elif not knowledge_context:
-            st.error("❌ 知識庫載入失敗。請檢查 `knowledge_base.txt` 是否與程式碼放在同一層資料夾，或按下 'C' 清除快取。")
+            st.error("❌ 知識庫載入失敗。請檢查 `knowledge_base.txt` 是否上傳，或按 'C' 清除快取。")
         else:
             with st.spinner("AI 正在翻閱 7 本經典文獻，為您尋找正確答案..."):
                 try:
                     genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-1.5-pro')
+                    # 使用 Flash 模型以獲得最高相容性與速度
+                    model = genai.GenerativeModel('gemini-1.5-flash')
                     
                     # 構建 Prompt
-                    # 注意：Gemini 1.5 Pro 的 context window 很大，但為了保險我們限制讀取量
                     prompt = f"""
                     你是一位精通人類圖財富與職涯的專家。
                     你的知識背景是以下提供的『知識庫』全文內容：
@@ -119,7 +119,8 @@ with tab_ai:
                 with st.spinner("正在辨識截圖數據..."):
                     try:
                         genai.configure(api_key=api_key)
-                        model = genai.GenerativeModel('gemini-1.5-pro')
+                        # 圖片辨識同樣使用 Flash 模型
+                        model = genai.GenerativeModel('gemini-1.5-flash')
                         res = model.generate_content(["請識別此人類圖的類型、內在權威、通道與閘門數字，用繁體中文列出。", img])
                         st.info(f"AI 識別結果：\n\n{res.text}")
                         st.write("💡 識別後，您可以將數據填入『手動輸入』標籤以獲取深度報告。")
