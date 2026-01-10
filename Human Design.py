@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import os
+import time
 from PIL import Image
 
 # --- 1. 設定與讀取知識庫 ---
@@ -30,7 +31,7 @@ with st.sidebar:
         api_key = st.text_input("請輸入 Gemini API Key", type="password")
     
     st.divider()
-    st.caption("版本：2.5 (流量穩定版)")
+    st.caption("版本：2.6 (極致流量優化版)")
     st.caption("作者：李晏駒 (YG)")
 
 # --- 3. 主畫面 ---
@@ -56,28 +57,25 @@ with tab_manual:
         elif not knowledge_context:
             st.error("❌ 找不到知識庫檔案")
         else:
-            with st.spinner("AI 正在翻閱 7 本文獻，請稍候..."):
+            with st.spinner("AI 正在深度檢索文獻 (免費版約需 30-60 秒)..."):
                 try:
                     genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-2.0-flash')
                     
-                    # 【關鍵優化】：將 context 限制在 15 萬字元內
-                    # 這大約等於 20-30 萬 Token，能確保在免費版的 TPM (每分鐘 Token 限制) 內安全運作
-                    safe_context = knowledge_context[:150000] 
+                    # 測試發現 2.0-flash 免費版限制較多，若 429 則改用 1.5-flash
+                    model_name = 'gemini-2.0-flash'
+                    model = genai.GenerativeModel(model_name)
+                    
+                    # 【終極優化】：只抓取前 5 萬字元，這能極大提高成功率
+                    # 5 萬字元已包含大量人類圖核心解析
+                    optimized_context = knowledge_context[:50000]
                     
                     prompt = f"""
-                    你是一位精通人類圖職涯與財富的導師。
-                    請根據這份文獻精華內容回答：
-                    --- 文獻開始 ---
-                    {safe_context}
-                    --- 文獻結束 ---
+                    你是一位人類圖職涯導師。請根據以下文獻核心：
+                    {optimized_context}
                     
-                    使用者數據：
-                    類型：{u_type} / 權威：{u_auth} / 通道：{u_ch} / 閘門：{u_gt}
-                    
+                    數據：類型 {u_type}, 權威 {u_auth}, 通道 {u_ch}, 閘門 {u_gt}
                     問題：{user_query}
-                    
-                    請給出極其具體、根據書中邏輯的職涯與賺錢建議。請以繁體中文回答。
+                    請直接給出具體且具備洞察力的賺錢建議。請用繁體中文。
                     """
                     
                     response = model.generate_content(prompt)
@@ -85,8 +83,6 @@ with tab_manual:
                     st.markdown(response.text)
                 except Exception as e:
                     if "429" in str(e):
-                        st.error("⚠️ 目前流量擁擠！請『等待 60 秒』後再按一次按鈕，這是免費版 API 的限制。")
+                        st.warning("⚠️ 免費版 API 正在冷卻。請等待 45 秒後再試，或嘗試更換 API Key。")
                     else:
-                        st.error(f"系統分析失敗：{e}")
-
-# 辨識分頁部分邏輯相同，建議同步修改模型名稱為 gemini-2.0-flash
+                        st.error(f"分析失敗：{e}")
